@@ -10,9 +10,16 @@ import 'app.dart';
 import 'package:alfalite_configurator/api/product_repository.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:alfalite_configurator/config/environment.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Print environment information for debugging
+  if (kDebugMode) {
+    Environment.printEnvironment();
+  }
+  
   final ui.Image backgroundImage =
       await _loadImage('assets/images/screen-background.png');
   final ui.Image maleImage = await _loadImage('assets/images/male_figure.png');

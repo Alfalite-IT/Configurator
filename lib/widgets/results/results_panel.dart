@@ -1,14 +1,15 @@
-import 'package:alfalite_configurator/models/configuration_result.dart';
-import 'package:alfalite_configurator/models/product.dart';
-import 'package:alfalite_configurator/widgets/results/results_grid.dart';
-import 'package:alfalite_configurator/widgets/results/screen_preview.dart';
-import 'package:equatable/equatable.dart';
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
-
 import 'package:flutter_bloc/flutter_bloc.dart';
-
+import 'package:equatable/equatable.dart';
+import 'dart:ui' as ui;
+import 'package:alfalite_configurator/blocs/product/product_bloc.dart';
 import 'package:alfalite_configurator/blocs/configuration/configuration_bloc.dart';
+import 'package:alfalite_configurator/models/product.dart';
+import 'package:alfalite_configurator/models/configuration_result.dart';
+import 'package:alfalite_configurator/config/environment.dart';
+import 'result_card.dart';
+import 'results_grid.dart';
+import 'package:alfalite_configurator/widgets/results/screen_preview.dart';
 
 class ResultsPanel extends StatelessWidget {
   final bool isWide;
@@ -326,8 +327,7 @@ Widget _buildProductImage(Product? product, {required double height}) {
     );
   }
 
-  const String serverBaseUrl = 'http://localhost:8080';
-  final String imageUrl = serverBaseUrl + product.image;
+  final String imageUrl = Environment.getServerUrl(product.image);
 
   return Image.network(
     imageUrl,

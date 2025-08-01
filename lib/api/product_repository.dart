@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:alfalite_configurator/models/product.dart';
+import 'package:alfalite_configurator/config/environment.dart';
 
 class ProductRepository {
-  final String _baseUrl = 'http://localhost:8080';
+  final String _baseUrl = Environment.apiBaseUrl;
 
   Future<List<Product>> fetchProducts() async {
     final response = await http.get(Uri.parse('$_baseUrl/products'));

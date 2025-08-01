@@ -1,0 +1,1 @@
+enum ConfigurationMode { tiles, dimensions, diagonal, surface } 

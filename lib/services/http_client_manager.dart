@@ -18,8 +18,10 @@ class HttpClientManager {
   http.Client get client {
     if (_client == null) {
       final ioc = HttpClient();
-      ioc.badCertificateCallback =
-          (X509Certificate cert, String host, int port) => true;
+      // Allow self-signed certificates in development
+      if (const bool.fromEnvironment('dart.vm.product') == false) {
+        ioc.badCertificateCallback = (cert, host, port) => true;
+      }
       _client = IOClient(ioc);
     }
     return _client!;

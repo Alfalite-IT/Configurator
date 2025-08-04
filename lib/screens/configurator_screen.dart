@@ -17,6 +17,8 @@ import 'package:alfalite_configurator/services/browser_detection_service.dart';
 import 'package:alfalite_configurator/widgets/browser_performance_notice.dart';
 import 'package:alfalite_configurator/utils/configuration_mode.dart';
 import 'package:alfalite_configurator/services/pdf_exporter.dart';
+import 'package:alfalite_configurator/services/pdf_generator.dart';
+import 'package:alfalite_configurator/services/email_client_service.dart';
 import 'package:equatable/equatable.dart';
 
 class ConfiguratorScreen extends StatefulWidget {
@@ -669,11 +671,13 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
           title: title,
           onSubmit: (userData) {
             final state = context.read<ConfigurationBloc>().state;
-            if (title == 'Save as PDF' || title == 'Request a Quote') {
-              _generateAndSavePdf(dialogContext, userData, state.result!);
+            if (title == 'Save as PDF') {
+              _generateAndSavePdf(dialogContext, userData, state.result!, 'pdf');
+            } else if (title == 'Request a Quote') {
+              _generateAndSavePdf(dialogContext, userData, state.result!, 'quote');
             } else if (title == 'Comparison Chart') {
               _generateComparativePdf(
-                  dialogContext, state.product!, state.result!, state.product2!, state.result2!);
+                  dialogContext, userData, state.product!, state.result!, state.product2!, state.result2!);
             }
           },
         );
@@ -682,10 +686,10 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
   }
 
   Future<void> _generateAndSavePdf(
-      BuildContext context, UserData userData, ConfigurationResult result) async {
+      BuildContext context, UserData userData, ConfigurationResult result, String emailType) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Generating PDF...'),
+        content: Text('Generating PDF and sending email...'),
         backgroundColor: Color(0xFFFC7100),
         duration: Duration(seconds: 4),
       ),
@@ -693,24 +697,52 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
 
     await Future.delayed(const Duration(milliseconds: 50));
 
-    final errorMessage =
-        await PdfExporter.generateAndSaveSingleProductPdf(userData, result);
-    if (errorMessage != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not process PDF: $errorMessage')),
-      );
+    // Generate PDF and get bytes for email
+    final pdfBytes = await PdfGenerator().generateSingleProductPdf(userData, result);
+    
+    // Save PDF locally (existing functionality)
+    final errorMessage = await PdfExporter.generateAndSaveSingleProductPdf(userData, result);
+    
+    // Send email with PDF attachment
+    final emailSuccess = await EmailClientService.sendPdfEmail(
+      userData: userData,
+      pdfBytes: pdfBytes,
+      emailType: emailType,
+    );
+
+    if (context.mounted) {
+      if (errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not process PDF: $errorMessage')),
+        );
+      } else if (!emailSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF generated successfully, but email could not be sent. Please try again.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF generated and email sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 
   Future<void> _generateComparativePdf(
       BuildContext context,
+      UserData userData,
       Product product1,
       ConfigurationResult result1,
       Product product2,
       ConfigurationResult result2) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Generating comparative PDF...'),
+        content: Text('Generating comparative PDF and sending email...'),
         backgroundColor: Color(0xFFFC7100),
         duration: Duration(seconds: 4),
       ),
@@ -718,6 +750,11 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
 
     await Future.delayed(const Duration(milliseconds: 50));
 
+    // Generate PDF and get bytes for email
+    final pdfBytes = await PdfGenerator().generateComparativePdf(
+      product1, result1, product2, result2);
+    
+    // Save PDF locally (existing functionality)
     final errorMessage = await PdfExporter.generateAndSaveComparativePdf(
       product1,
       result1,
@@ -725,10 +762,34 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
       result2,
     );
 
-    if (errorMessage != null && context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not process PDF: $errorMessage')),
-      );
+
+
+    // Send email with PDF attachment
+    final emailSuccess = await EmailClientService.sendComparisonEmail(
+      userData: userData,
+      pdfBytes: pdfBytes,
+    );
+
+    if (context.mounted) {
+      if (errorMessage != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Could not process PDF: $errorMessage')),
+        );
+      } else if (!emailSuccess) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF generated successfully, but email could not be sent. Please try again.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PDF generated and email sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 }

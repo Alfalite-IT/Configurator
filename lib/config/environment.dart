@@ -4,16 +4,16 @@
 /// environment-specific configuration. Values are set using --dart-define
 /// flags during the build process.
 class Environment {
-  /// Base URL for API requests (e.g., http://localhost:8080 or https://api.yourdomain.com)
+  /// Base URL for API requests (e.g., http://localhost:8080 or https://localhost:1337)
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: 'https://localhost:1337',
   );
   
-  /// Base URL for server resources like images (e.g., http://localhost:8080 or https://api.yourdomain.com)
+  /// Base URL for server resources like images (e.g., http://localhost:8080 or https://localhost:1337)
   static const String serverBaseUrl = String.fromEnvironment(
     'SERVER_BASE_URL',
-    defaultValue: 'http://localhost:8080',
+    defaultValue: 'https://localhost:1337',
   );
   
   /// Environment name (development, staging, production)

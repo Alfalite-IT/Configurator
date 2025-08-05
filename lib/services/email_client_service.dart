@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'user_data.dart';
 import '../config/environment.dart';
+import 'http_client_manager.dart';
 
 class EmailClientService {
   static String get _baseUrl => Environment.apiBaseUrl;
@@ -33,7 +34,7 @@ class EmailClientService {
         'emailType': emailType,
       };
 
-      final response = await http.post(
+      final response = await HttpClientManager.instance.client.post(
         url,
         headers: {
           'Content-Type': 'application/json',

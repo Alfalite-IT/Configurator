@@ -643,7 +643,7 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
         const SizedBox(height: 10),
         ElevatedButton(
           onPressed: () => _showUserInfoForm(context, 'Save as PDF'),
-          child: const Text('Save as PDF'),
+          child: const Text('Send PDF by Email'),
         ),
         const SizedBox(height: 10),
         ElevatedButton(
@@ -656,7 +656,7 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
             onPressed: () => _showUserInfoForm(context, 'Comparison Chart'),
             style:
                 ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFC7100)),
-            child: const Text('Comparison Chart'),
+            child: const Text('Send Comparison by Email'),
           ),
         ],
       ],
@@ -697,36 +697,40 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
 
     await Future.delayed(const Duration(milliseconds: 50));
 
-    // Generate PDF and get bytes for email
-    final pdfBytes = await PdfGenerator().generateSingleProductPdf(userData, result);
-    
-    // Save PDF locally (existing functionality)
-    final errorMessage = await PdfExporter.generateAndSaveSingleProductPdf(userData, result);
-    
-    // Send email with PDF attachment
-    final emailSuccess = await EmailClientService.sendPdfEmail(
-      userData: userData,
-      pdfBytes: pdfBytes,
-      emailType: emailType,
-    );
+    try {
+      // Generate PDF and get bytes for email
+      final pdfBytes = await PdfGenerator().generateSingleProductPdf(userData, result);
+      
+      // Send email with PDF attachment
+      final emailSuccess = await EmailClientService.sendPdfEmail(
+        userData: userData,
+        pdfBytes: pdfBytes,
+        emailType: emailType,
+      );
 
-    if (context.mounted) {
-      if (errorMessage != null) {
+      if (context.mounted) {
+        if (emailSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PDF generated and email sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email could not be sent. Please try again.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not process PDF: $errorMessage')),
-        );
-      } else if (!emailSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('PDF generated successfully, but email could not be sent. Please try again.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('PDF generated and email sent successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -742,7 +746,7 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
       ConfigurationResult result2) async {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Generating comparative PDF and sending email...'),
+        content: Text('Generating comparison PDF and sending email...'),
         backgroundColor: Color(0xFFFC7100),
         duration: Duration(seconds: 4),
       ),
@@ -750,43 +754,40 @@ class _ConfiguratorScreenState extends State<ConfiguratorScreen>
 
     await Future.delayed(const Duration(milliseconds: 50));
 
-    // Generate PDF and get bytes for email
-    final pdfBytes = await PdfGenerator().generateComparativePdf(
-      product1, result1, product2, result2);
-    
-    // Save PDF locally (existing functionality)
-    final errorMessage = await PdfExporter.generateAndSaveComparativePdf(
-      product1,
-      result1,
-      product2,
-      result2,
-    );
+    try {
+      // Generate PDF and get bytes for email
+      final pdfBytes = await PdfGenerator().generateComparativePdf(
+        product1, result1, product2, result2);
+      
+      // Send email with PDF attachment
+      final emailSuccess = await EmailClientService.sendComparisonEmail(
+        userData: userData,
+        pdfBytes: pdfBytes,
+      );
 
-
-
-    // Send email with PDF attachment
-    final emailSuccess = await EmailClientService.sendComparisonEmail(
-      userData: userData,
-      pdfBytes: pdfBytes,
-    );
-
-    if (context.mounted) {
-      if (errorMessage != null) {
+      if (context.mounted) {
+        if (emailSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Comparison PDF generated and email sent successfully!'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Email could not be sent. Please try again.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Could not process PDF: $errorMessage')),
-        );
-      } else if (!emailSuccess) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('PDF generated successfully, but email could not be sent. Please try again.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('PDF generated and email sent successfully!'),
-            backgroundColor: Colors.green,
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
           ),
         );
       }

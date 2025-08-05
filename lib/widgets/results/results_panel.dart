@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:alfalite_configurator/blocs/product/product_bloc.dart';
 import 'package:alfalite_configurator/blocs/configuration/configuration_bloc.dart';
 import 'package:alfalite_configurator/models/product.dart';
 import 'package:alfalite_configurator/models/configuration_result.dart';
 import 'package:alfalite_configurator/config/environment.dart';
+import 'package:alfalite_configurator/services/http_client_manager.dart';
 import 'result_card.dart';
 import 'results_grid.dart';
 import 'package:alfalite_configurator/widgets/results/screen_preview.dart';
@@ -329,45 +331,72 @@ Widget _buildProductImage(Product? product, {required double height}) {
 
   final String imageUrl = Environment.getServerUrl(product.image);
 
-  return Image.network(
-    imageUrl,
-    height: height,
-    fit: BoxFit.contain,
-    errorBuilder: (context, error, stackTrace) {
-      return Container(
-        height: height,
-        color: Colors.grey[800],
-        child: const Center(
-          child: Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Text(
-              'Error loading image',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white),
+  return FutureBuilder<Uint8List?>(
+    future: _loadImageWithHttpClient(imageUrl),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return Container(
+          height: height,
+          color: Colors.grey[800],
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+      
+      if (snapshot.hasError || !snapshot.hasData) {
+        return Container(
+          height: height,
+          color: Colors.grey[800],
+          child: const Center(
+            child: Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Text(
+                'Error loading image',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white),
+              ),
             ),
           ),
-        ),
-      );
-    },
-    loadingBuilder:
-        (BuildContext context, Widget child, ImageChunkEvent? loadingProgress) {
-      if (loadingProgress == null) {
-        return child;
+        );
       }
-      return Container(
+
+      return Image.memory(
+        snapshot.data!,
         height: height,
-        color: Colors.grey[800],
-        child: Center(
-          child: CircularProgressIndicator(
-            value: loadingProgress.expectedTotalBytes != null
-                ? loadingProgress.cumulativeBytesLoaded /
-                    loadingProgress.expectedTotalBytes!
-                : null,
-          ),
-        ),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: height,
+            color: Colors.grey[800],
+            child: const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8.0),
+                child: Text(
+                  'Error loading image',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          );
+        },
       );
     },
   );
+}
+
+Future<Uint8List?> _loadImageWithHttpClient(String imageUrl) async {
+  try {
+    final response = await HttpClientManager.instance.client.get(Uri.parse(imageUrl));
+    if (response.statusCode == 200) {
+      return response.bodyBytes;
+    }
+    return null;
+  } catch (e) {
+    print('Error loading image: $e');
+    return null;
+  }
 }
 
 class _ScreenPreviewState extends Equatable {

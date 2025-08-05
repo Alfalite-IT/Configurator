@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # Nginx Reverse Proxy
+  nginx:
+    image: nginx:alpine
+    container_name: alfalite-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - configurator
+      - admin-panel
+    restart: unless-stopped
+    networks:
+      - alfalite-network
+
+  # Configurator App
+  configurator:
+    build:
+      context: ../alfalite-configurator
+      dockerfile: Dockerfile
+    container_name: alfalite-configurator
+    expose:
+      - "80"
+    restart: unless-stopped
+    networks:
+      - alfalite-network
+
+  # Admin Panel App
+  admin-panel:
+    build:
+      context: ../alfalite-admin-panel
+      dockerfile: Dockerfile
+    container_name: alfalite-admin-panel
+    expose:
+      - "80"
+    restart: unless-stopped
+    networks:
+      - alfalite-network
+
+  # Backend Server (Internal Only)
+  alfalite-server:
+    build:
+      context: ../alfalite-server
+      dockerfile: Dockerfile
+    container_name: alfalite-server
+    environment:
+      - ENVIRONMENT=production
+      - USE_HTTPS=true
+      - HTTPS_PORT=1337
+      - DB_HOST=alfalite-database
+      - DB_PORT=5432
+      - DB_NAME=alfalite_db
+      - DB_PUBLIC_USER=alfalite_public_user
+      - DB_PUBLIC_PASSWORD=${DB_PUBLIC_PASSWORD}
+      - DB_ADMIN_USER=alfalite_admin_user
+      - DB_ADMIN_PASSWORD=${DB_ADMIN_PASSWORD}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
+      - SMTP_HOST=${SMTP_HOST}
+      - SMTP_PORT=${SMTP_PORT}
+      - SMTP_USERNAME=${SMTP_USERNAME}
+      - SMTP_PASSWORD=${SMTP_PASSWORD}
+      - COMPANY_EMAIL=${COMPANY_EMAIL}
+      - ALLOWED_ORIGINS=https://app.alfalite.com,https://admin.alfalite.com
+    volumes:
+      - ./certs:/app/certs:ro
+      - ../alfalite-server/public:/app/public:ro
+    expose:
+      - "1337"
+    depends_on:
+      - alfalite-database
+    restart: unless-stopped
+    networks:
+      - alfalite-network
+
+  # Database (Internal Only)
+  alfalite-database:
+    image: postgres:15-alpine
+    container_name: alfalite-database
+    environment:
+      - POSTGRES_DB=alfalite_db
+      - POSTGRES_USER=alfalite_admin_user
+      - POSTGRES_PASSWORD=${DB_ADMIN_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    expose:
+      - "5432"
+    restart: unless-stopped
+    networks:
+      - alfalite-network
+
+volumes:
+  postgres_data:
+
+networks:
+  alfalite-network:
+    driver: bridge
